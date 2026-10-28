@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>楓谷生存戰記 v0.3｜像素美術＋手機搖桿版</title>
+<title>楓谷生存戰記 v0.3.1｜像素美術＋手機搖桿／視窗修正版</title>
 <style>
 :root{--bg:#111525;--panel:#20283d;--line:#526080;--gold:#ffd56b;--text:#f5f7ff;--muted:#b9c3df}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% 0,#293452,#101421 65%);color:var(--text);font-family:system-ui,-apple-system,"Microsoft JhengHei",sans-serif}
@@ -41,13 +41,39 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;image-rendering:p
 #mobileJoystick .joy-label{position:absolute;left:0;right:0;bottom:-21px;text-align:center;font-size:10px;color:#e8f3ff;text-shadow:0 1px 3px #000}
 @media (pointer:coarse) and (max-width:900px){#mobileJoystick{display:block}.mobilehelp{display:block}}
 
-@media(max-width:760px){.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.side h2,.controls{grid-column:1/-1}.jobs,.choices{grid-template-columns:1fr}.job,.choice{min-height:auto}.mobilehelp{display:block}}
+
+@media(max-width:760px){
+  /* 手機上的選職業／升級／暫停視窗改為視窗層級，避免被遊戲畫布高度裁切 */
+  .overlay{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    align-items:center;
+    justify-content:center;
+    padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+    box-sizing:border-box;
+  }
+  .modal{
+    width:100%;
+    max-width:560px;
+    max-height:calc(100vh - 32px);
+    max-height:calc(100dvh - max(32px, env(safe-area-inset-top) + env(safe-area-inset-bottom) + 16px));
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    margin:auto;
+    flex-shrink:0;
+  }
+  .jobs,.choices{grid-template-columns:1fr}
+  .job,.choice{min-height:auto}
+.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.side h2,.controls{grid-column:1/-1}.jobs,.choices{grid-template-columns:1fr}.job,.choice{min-height:auto}.mobilehelp{display:block}}
 </style>
 </head>
 <body>
 <main>
   <div class="top">
-    <div><h1>⚔️ 楓谷生存戰記</h1><div class="sub">2D 生存戰鬥 · 像素角色動畫版 · v0.3</div></div>
+    <div><h1>⚔️ 楓谷生存戰記</h1><div class="sub">2D 生存戰鬥 · 像素角色動畫版 · v0.3.1</div></div>
     <div><button id="restartTop">重新開始</button> <button id="pauseBtn">暫停</button></div>
   </div>
   <div class="layout">
@@ -98,7 +124,7 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;image-rendering:p
       <div class="stat"><span>生存時間</span><span id="timeStat">00:00</span></div>
       <div class="stat"><span>技能強化</span><span id="upgradeStat">0</span></div>
       <div class="controls"><strong>遊戲提示</strong><br>• 經驗水晶會自動吸收<br>• 升級時戰鬥會暫停<br>• 怪物會隨時間變強<br>• 受到攻擊會損失生命<br>• HP 歸零即結束本局</div>
-      <div class="notice">v0.3 加入程式繪製的像素風角色細節、待機呼吸、跑步擺動、劍士揮砍姿勢、怪物跳動與藍白斬擊特效。未包含官方遊戲素材。</div>
+      <div class="notice">v0.3.1 加入程式繪製的像素風角色細節、待機呼吸、跑步擺動、劍士揮砍姿勢、怪物跳動與藍白斬擊特效。未包含官方遊戲素材。</div>
     </aside>
   </div>
   <div class="mobilehelp">手機操作：使用左下角虛擬搖桿移動，攻擊會自動發動。電腦版則使用 WASD／方向鍵。</div>
