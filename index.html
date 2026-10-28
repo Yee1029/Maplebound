@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>楓谷生存戰記 v0.2｜像素美術版</title>
+<style>
+:root{--bg:#111525;--panel:#20283d;--line:#526080;--gold:#ffd56b;--text:#f5f7ff;--muted:#b9c3df}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% 0,#293452,#101421 65%);color:var(--text);font-family:system-ui,-apple-system,"Microsoft JhengHei",sans-serif}
+main{max-width:1100px;margin:auto;padding:16px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:clamp(22px,4vw,32px);margin:0}.sub{color:var(--muted);font-size:13px;margin-top:4px}
+button{font:inherit;cursor:pointer;border:1px solid #7785aa;border-radius:10px;background:#303c59;color:white;padding:10px 14px;font-weight:700}
+button:hover{filter:brightness(1.15)}button:disabled{opacity:.45;cursor:not-allowed}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:12px}
+.gamebox{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#171d2c;box-shadow:0 12px 36px #0005}
+canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;image-rendering:pixelated;touch-action:none}
+.hud{position:absolute;inset:10px 10px auto;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
+.pill{background:#111827d9;border:1px solid #5c6887;border-radius:8px;padding:6px 9px;font-size:12px;box-shadow:0 2px 8px #0004}
+.bars{position:absolute;bottom:10px;left:10px;right:10px;display:grid;gap:5px;pointer-events:none}
+.bar{height:13px;border:1px solid #d5d9e8;border-radius:5px;overflow:hidden;background:#101421dd;position:relative}
+.bar span{display:block;height:100%;width:100%;transition:width .12s}
+.bar label{position:absolute;inset:-2px 0 0;text-align:center;font-size:10px;font-weight:800;text-shadow:0 1px 2px black}
+#hpFill{background:linear-gradient(90deg,#e54463,#ff8191)}#xpFill{background:linear-gradient(90deg,#38a5ff,#8ee7ff)}
+.side{background:#1a2133;border:1px solid var(--line);border-radius:14px;padding:14px}
+.side h2{font-size:16px;margin:0 0 10px}.stat{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #ffffff12;font-size:13px}.stat span:last-child{font-weight:800;color:var(--gold)}
+.controls{font-size:12px;line-height:1.8;color:var(--muted);margin-top:14px}.controls strong{color:white}
+.notice{margin-top:12px;color:var(--muted);font-size:12px;line-height:1.6}
+.overlay{position:absolute;inset:0;background:#0a0d17d9;display:flex;align-items:center;justify-content:center;padding:18px;z-index:5}
+.modal{width:min(560px,100%);background:#20283d;border:1px solid #6c7da6;border-radius:16px;padding:22px;box-shadow:0 20px 60px #0009}
+.modal h2{margin:0 0 8px;font-size:24px}.modal p{color:var(--muted);line-height:1.6;margin:6px 0 16px}
+.jobs,.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.job,.choice{border:1px solid #66769b;border-radius:12px;background:#2b3650;padding:12px;text-align:left;min-height:110px}
+.job b,.choice b{display:block;font-size:16px;margin-bottom:7px}.job small,.choice small{color:#c5cde1;line-height:1.5}
+.job .emoji{font-size:28px;display:block;margin-bottom:8px}
+.full{width:100%;margin-top:12px;background:#b98028;border-color:#ffdb85;color:#1a1b24}
+.hidden{display:none!important}
+.mobilehelp{display:none;color:var(--muted);font-size:12px;margin-top:8px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.side h2,.controls{grid-column:1/-1}.jobs,.choices{grid-template-columns:1fr}.job,.choice{min-height:auto}.mobilehelp{display:block}}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div><h1>⚔️ 楓谷生存戰記</h1><div class="sub">2D 生存戰鬥 · 像素角色動畫版 · v0.2</div></div>
+    <div><button id="restartTop">重新開始</button> <button id="pauseBtn">暫停</button></div>
+  </div>
+  <div class="layout">
+    <section class="gamebox">
+      <canvas id="game" width="960" height="600" aria-label="遊戲畫面"></canvas>
+      <div class="hud">
+        <div class="pill" id="jobPill">職業：尚未選擇</div>
+        <div class="pill" id="timePill">⏱ 00:00</div>
+        <div class="pill" id="killPill">擊敗 0</div>
+      </div>
+      <div class="bars">
+        <div class="bar"><span id="hpFill"></span><label id="hpText">HP</label></div>
+        <div class="bar"><span id="xpFill"></span><label id="xpText">EXP</label></div>
+      </div>
+      <div class="overlay" id="overlay">
+        <div class="modal" id="startModal">
+          <h2>選擇你的冒險職業</h2>
+          <p>移動、擊敗怪物、收集經驗值並強化技能。這是第一版可操作原型，畫面素材由程式即時繪製。</p>
+          <div class="jobs">
+            <button class="job" data-job="warrior"><span class="emoji">🗡️</span><b>劍士</b><small>近距離揮砍，生命較高</small></button>
+            <button class="job" data-job="mage"><span class="emoji">🔮</span><b>法師</b><small>遠距離魔法球，攻擊範圍大</small></button>
+            <button class="job" data-job="archer"><span class="emoji">🏹</span><b>弓箭手</b><small>快速射箭，攻速較快</small></button>
+          </div>
+          <p class="controls"><strong>操作：</strong>WASD／方向鍵移動 · 手機可在畫面上拖曳控制 · 攻擊自動發動 · P 暫停</p>
+        </div>
+        <div class="modal hidden" id="levelModal">
+          <h2>✨ 等級提升！</h2><p>選擇一項強化，繼續你的生存挑戰。</p><div class="choices" id="choices"></div>
+        </div>
+        <div class="modal hidden" id="endModal">
+          <h2 id="endTitle">冒險結束</h2><p id="endText"></p><button class="full" id="playAgain">再挑戰一次</button>
+        </div>
+        <div class="modal hidden" id="pauseModal">
+          <h2>⏸ 遊戲暫停</h2><p>休息一下，準備好再繼續。</p><button class="full" id="resumeBtn">繼續遊戲</button>
+        </div>
+      </div>
+    </section>
+    <aside class="side">
+      <h2>冒險狀態</h2>
+      <div class="stat"><span>等級</span><span id="levelStat">1</span></div>
+      <div class="stat"><span>攻擊力</span><span id="atkStat">10</span></div>
+      <div class="stat"><span>攻擊速度</span><span id="speedStat">1.0/s</span></div>
+      <div class="stat"><span>擊敗怪物</span><span id="killsStat">0</span></div>
+      <div class="stat"><span>生存時間</span><span id="timeStat">00:00</span></div>
+      <div class="stat"><span>技能強化</span><span id="upgradeStat">0</span></div>
+      <div class="controls"><strong>遊戲提示</strong><br>• 經驗水晶會自動吸收<br>• 升級時戰鬥會暫停<br>• 怪物會隨時間變強<br>• 受到攻擊會損失生命<br>• HP 歸零即結束本局</div>
+      <div class="notice">v0.2 加入程式繪製的像素風角色細節、待機呼吸、跑步擺動、劍士揮砍姿勢、怪物跳動與藍白斬擊特效。未包含官方遊戲素材。</div>
+    </aside>
+  </div>
+  <div class="mobilehelp">手機操作：在遊戲畫面內按住並朝想移動的方向拖曳。攻擊會自動發動。</div>
+  <div class="notice">提示：這是純前端原型，無需登入、伺服器或安裝。遊戲紀錄目前只保留在本次遊玩期間。</div>
+</main>
+<script>
+(() => {
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+const $=id=>document.getElementById(id);
+const overlay=$('overlay'),startModal=$('startModal'),levelModal=$('levelModal'),endModal=$('endModal'),pauseModal=$('pauseModal');
+const keys=new Set();
+let state='menu',jobKey='warrior',player=null,enemies=[],orbs=[],shots=[],effects=[],keysHeld={},last=0,elapsed=0,spawnTimer=0,attackTimer=0,kills=0,upgradeCount=0,level=1,xp=0,xpNeed=5,joy=null,mouseDown=false;
+const jobs={
+ warrior:{name:'劍士',color:'#5fc3ff',hp:145,atk:19,rate:.72,range:70,kind:'slash',desc:'近戰揮砍'},
+ mage:{name:'法師',color:'#d3a1ff',hp:95,atk:14,rate:.95,range:300,kind:'orb',desc:'魔法彈'},
+ archer:{name:'弓箭手',color:'#8ce6a0',hp:105,atk:11,rate:.34,range:330,kind:'arrow',desc:'快速射箭'}
+};
+const upgrades=[
+ {name:'強力攻擊',desc:'攻擊傷害 +25%',apply:p=>p.atk*=1.25},
+ {name:'迅捷身手',desc:'攻擊速度 +18%',apply:p=>p.rate*=.82},
+ {name:'生命提升',desc:'最大生命 +30，並回復 30 HP',apply:p=>{p.maxHp+=30;p.hp=Math.min(p.maxHp,p.hp+30)}},
+ {name:'移動訓練',desc:'移動速度 +12%',apply:p=>p.move*=1.12},
+ {name:'經驗共鳴',desc:'經驗吸收範圍 +35%',apply:p=>p.magnet*=1.35},
+ {name:'技能專精',desc:'技能傷害 +15%',apply:p=>p.atk*=1.15}
+];
+function resetGame(key){
+ jobKey=key;const j=jobs[key];
+ player={x:W/2,y:H/2,r:13,hp:j.hp,maxHp:j.hp,atk:j.atk,rate:j.rate,range:j.range,move:205,magnet:75,color:j.color,kind:j.kind,invuln:0};
+ enemies=[];orbs=[];shots=[];effects=[];elapsed=0;spawnTimer=.5;attackTimer=.2;kills=0;upgradeCount=0;level=1;xp=0;xpNeed=5;state='playing';
+ overlay.classList.add('hidden');startModal.classList.add('hidden');levelModal.classList.add('hidden');endModal.classList.add('hidden');pauseModal.classList.add('hidden');
+ $('jobPill').textContent='職業：'+j.name;updateHud();
+}
+function showOverlay(modal){overlay.classList.remove('hidden');[startModal,levelModal,endModal,pauseModal].forEach(x=>x.classList.add('hidden'));modal.classList.remove('hidden')}
+function pause(){if(state==='playing'){state='paused';showOverlay(pauseModal)}else if(state==='paused'){state='playing';overlay.classList.add('hidden')}}
+function fmt(t){let m=Math.floor(t/60),s=Math.floor(t%60);return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+function updateHud(){
+ if(!player)return;
+ $('hpFill').style.width=(Math.max(0,player.hp)/player.maxHp*100)+'%';$('hpText').textContent=`HP ${Math.ceil(Math.max(0,player.hp))} / ${player.maxHp}`;
+ $('xpFill').style.width=(xp/xpNeed*100)+'%';$('xpText').textContent=`EXP ${xp} / ${xpNeed}`;
+ $('timePill').textContent='⏱ '+fmt(elapsed);$('killPill').textContent='擊敗 '+kills;
+ $('levelStat').textContent=level;$('atkStat').textContent=Math.round(player.atk);$('speedStat').textContent=(1/player.rate).toFixed(1)+'/s';
+ $('killsStat').textContent=kills;$('timeStat').textContent=fmt(elapsed);$('upgradeStat').textContent=upgradeCount;
+}
+function rand(a,b){return a+Math.random()*(b-a)}
+function spawnEnemy(){
+ const side=Math.floor(Math.random()*4);let x,y;
+ if(side===0){x=rand(0,W);y=-20}else if(side===1){x=W+20;y=rand(0,H)}else if(side===2){x=rand(0,W);y=H+20}else{x=-20;y=rand(0,H)}
+ const tough=1+Math.floor(elapsed/35)*.22;
+ const type=Math.random()<.18?'mushroom':'slime';
+ enemies.push({x,y,r:type==='mushroom'?15:12,hp:(type==='mushroom'?42:25)*tough,maxHp:(type==='mushroom'?42:25)*tough,speed:(type==='mushroom'?38:53)+Math.min(30,elapsed*.25),atk:9+Math.min(12,elapsed*.12),type,hit:0});
+}
+function nearestEnemy(range=Infinity){let best=null,bd=range;for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<bd){bd=d;best=e}}return best}
+function attack(){
+ const target=nearestEnemy(player.range+35);if(!target)return;
+ if(player.kind==='slash'){
+   const d=Math.hypot(target.x-player.x,target.y-player.y);if(d<player.range+target.r){
+    target.hp-=player.atk;target.hit=.15;effects.push({type:'slash',x:player.x,y:player.y,tx:target.x,ty:target.y,t:.18});
+   }
+ }else{
+  const a=Math.atan2(target.y-player.y,target.x-player.x),spd=player.kind==='orb'?310:510;
+  shots.push({x:player.x,y:player.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,damage:player.atk,r:player.kind==='orb'?7:3,life:1.2,kind:player.kind});
+ }
+}
+function gainXp(n){xp+=n;while(xp>=xpNeed){xp-=xpNeed;level++;xpNeed=Math.ceil(xpNeed*1.42+2);chooseUpgrade();break}}
+function chooseUpgrade(){
+ state='level';showOverlay(levelModal);
+ const choices=$('choices');choices.innerHTML='';
+ const opts=[...upgrades].sort(()=>Math.random()-.5).slice(0,3);
+ opts.forEach(u=>{const b=document.createElement('button');b.className='choice';b.innerHTML=`<b>${u.name}</b><small>${u.desc}</small>`;b.onclick=()=>{u.apply(player);upgradeCount++;state='playing';overlay.classList.add('hidden');updateHud()};choices.appendChild(b)});
+}
+function hurt(dmg){if(player.invuln>0)return;player.hp-=dmg;player.invuln=.55;effects.push({type:'hurt',x:player.x,y:player.y,t:.22});if(player.hp<=0)gameOver()}
+function gameOver(){state='over';showOverlay(endModal);$('endTitle').textContent='💫 冒險結束';$('endText').textContent=`你使用${jobs[jobKey].name}生存了 ${fmt(elapsed)}，擊敗 ${kills} 隻怪物並達到等級 ${level}。`;}
+function update(dt){
+ if(state!=='playing'||!player)return;
+ elapsed+=dt;player.invuln=Math.max(0,player.invuln-dt);
+ let dx=0,dy=0;
+ if(keys.has('w')||keys.has('arrowup'))dy--;if(keys.has('s')||keys.has('arrowdown'))dy++;
+ if(keys.has('a')||keys.has('arrowleft'))dx--;if(keys.has('d')||keys.has('arrowright'))dx++;
+ if(joy){dx+=joy.dx;dy+=joy.dy}
+ const mag=Math.hypot(dx,dy)||1;player.x=Math.max(player.r,Math.min(W-player.r,player.x+dx/mag*player.move*dt));player.y=Math.max(player.r+25,Math.min(H-player.r-25,player.y+dy/mag*player.move*dt));
+ spawnTimer-=dt;if(spawnTimer<=0){spawnEnemy();spawnTimer=Math.max(.28,1.05-elapsed*.006)}
+ attackTimer-=dt;if(attackTimer<=0){attack();attackTimer=player.rate}
+ for(const e of enemies){
+  const a=Math.atan2(player.y-e.y,player.x-e.x),d=Math.hypot(player.x-e.x,player.y-e.y);
+  if(d>player.r+e.r-2){e.x+=Math.cos(a)*e.speed*dt;e.y+=Math.sin(a)*e.speed*dt}else hurt(e.atk*dt*1.6);
+  e.hit=Math.max(0,e.hit-dt);
+ }
+ for(const s of shots){s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;for(const e of enemies){if(e.hp>0&&Math.hypot(e.x-s.x,e.y-s.y)<e.r+s.r){e.hp-=s.damage;e.hit=.12;s.life=0;effects.push({type:'spark',x:s.x,y:s.y,t:.15});break}}}
+ shots=shots.filter(s=>s.life>0&&s.x>-30&&s.x<W+30&&s.y>-30&&s.y<H+30);
+ const dead=enemies.filter(e=>e.hp<=0);for(const e of dead){kills++;orbs.push({x:e.x,y:e.y,r:5,v:rand(0,6),val:e.type==='mushroom'?2:1});effects.push({type:'pop',x:e.x,y:e.y,t:.25})}
+ enemies=enemies.filter(e=>e.hp>0);
+ for(const o of orbs){const d=Math.hypot(player.x-o.x,player.y-o.y);if(d<player.magnet){o.x+=(player.x-o.x)*Math.min(1,dt*4);o.y+=(player.y-o.y)*Math.min(1,dt*4)}if(d<player.r+o.r+4){o.got=true;gainXp(o.val);if(state!=='playing')break}}
+ orbs=orbs.filter(o=>!o.got);
+ effects.forEach(e=>e.t-=dt);effects=effects.filter(e=>e.t>0);
+ updateHud();
+}
+function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))}
+function draw(){
+ ctx.clearRect(0,0,W,H);
+ // richly tiled pixel meadow
+ rect(0,0,W,H,'#254737');
+ for(let y=0;y<H;y+=32)for(let x=0;x<W;x+=32){
+   rect(x,y,31,31,((x/32+y/32)%3===0)?'#2d513f':'#294b3b');
+   if((x*7+y*3)%11===0){rect(x+7,y+8,3,3,'#5c8b4b');rect(x+10,y+11,2,2,'#a3c96a')}
+   if((x*13+y*5)%17===0){rect(x+20,y+20,3,2,'#e9d98c');rect(x+22,y+17,2,3,'#d7e7a4')}
+ }
+ // decorative flowers, stones and little grass clumps
+ for(let i=0;i<26;i++){let x=(i*137+47)%W,y=(i*83+31)%H;rect(x,y,5,3,'#42744a');rect(x+2,y-3,3,3,i%3===0?'#f4d9ff':i%3===1?'#f4df87':'#e8f5d0')}
+ for(let i=0;i<9;i++){let x=(i*211+90)%W,y=(i*97+75)%H;rect(x,y,10,5,'#526e58');rect(x+2,y-3,6,4,'#71876a')}
+ // subtle forest edge
+ ctx.strokeStyle='#6b9274';ctx.lineWidth=5;ctx.strokeRect(7,7,W-14,H-14);
+ for(const o of orbs){ctx.fillStyle='#83e8ff';ctx.beginPath();ctx.moveTo(o.x,o.y-o.r);ctx.lineTo(o.x+o.r,o.y);ctx.lineTo(o.x,o.y+o.r);ctx.lineTo(o.x-o.r,o.y);ctx.closePath();ctx.fill();ctx.fillStyle='#e6fcff';ctx.fillRect(o.x-1,o.y-2,2,4)}
+ for(const s of shots){ctx.fillStyle=s.kind==='orb'?'#d4a0ff':'#fff0a0';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();if(s.kind==='orb'){ctx.strokeStyle='#f4dcff';ctx.stroke()}}
+ for(const e of enemies)drawEnemy(e);
+ if(player)drawPlayer();
+ for(const ef of effects){
+  if(ef.type==='slash'){let a=Math.atan2(ef.ty-ef.y,ef.tx-ef.x);ctx.strokeStyle=`rgba(100,190,255,${ef.t/.18})`;ctx.lineWidth=12;ctx.beginPath();ctx.arc(ef.x,ef.y,38,a-.9,a+.9);ctx.stroke();ctx.strokeStyle=`rgba(240,250,255,${ef.t/.18})`;ctx.lineWidth=4;ctx.beginPath();ctx.arc(ef.x,ef.y,38,a-.9,a+.9);ctx.stroke();for(let k=0;k<5;k++){let q=a-.65+k*.32;ctx.fillStyle='#b8efff';ctx.fillRect(ef.x+Math.cos(q)*42-2,ef.y+Math.sin(q)*42-2,4,4)}}
+  if(ef.type==='spark'||ef.type==='pop'){ctx.fillStyle='#fff1a8';ctx.fillRect(ef.x-4,ef.y-4,8,8)}
+  if(ef.type==='hurt'){ctx.strokeStyle='#ff7c89';ctx.lineWidth=4;ctx.beginPath();ctx.arc(ef.x,ef.y,25,0,Math.PI*2);ctx.stroke()}
+ }
+ if(!player){ctx.fillStyle='#ffffff22';ctx.font='bold 22px system-ui';ctx.textAlign='center';ctx.fillText('選擇職業，開始生存挑戰！',W/2,H/2)}
+}
+
+function px(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))}
+function outlineRect(x,y,w,h,fill,edge){
+  px(x-1,y-1,w+2,h+2,edge);px(x,y,w,h,fill);
+}
+function drawPlayer(){
+ const p=player, t=performance.now()/1000;
+ const moving=(keys.has('w')||keys.has('a')||keys.has('s')||keys.has('d')||keys.has('arrowup')||keys.has('arrowdown')||keys.has('arrowleft')||keys.has('arrowright')||!!joy);
+ const frame=Math.floor(t*(moving?10:4))%(moving?6:4);
+ const bob=moving?Math.sin(t*13)*2:Math.sin(t*3.4)*1.2;
+ const swing=(p.kind==='slash' && attackTimer<.18);
+ ctx.save();ctx.translate(Math.round(p.x),Math.round(p.y+bob));
+ // soft pixel shadow
+ px(-14,13,28,5,'#14271f');px(-10,12,20,3,'#1b3028');
+ if(p.invuln>0&&Math.floor(p.invuln*18)%2===0)ctx.globalAlpha=.45;
+ // rear hair and head silhouette
+ outlineRect(-9,-18,18,15,'#f2d7b2','#543b46');
+ px(-10,-18,20,7,'#f1f0ff');px(-9,-22,17,5,'#ffffff');px(-13,-16,5,8,'#d9e1ff');
+ px(-6,-13,3,3,'#30324c');px(4,-13,3,3,'#30324c');px(0,-8,4,2,'#b86f75');
+ // spiky hair tufts
+ px(-10,-20,5,5,'#dfe6ff');px(-5,-23,7,5,'#ffffff');px(2,-21,8,5,'#e8edff');px(7,-17,5,4,'#c4d2f8');
+ // neck and tunic
+ px(-4,-4,8,5,'#f0c6a0');
+ outlineRect(-9,0,18,13,p.color,'#343951');
+ px(-7,2,14,3,'#f3f5ff');px(-5,5,10,2,'#e2b85d');px(-2,7,4,3,'#b57d42');
+ // arms alternate while running
+ const arm= moving ? (frame%2?2:-1):0;
+ px(-13,1+arm,5,9,'#eac39e');px(8,1-arm,5,9,'#eac39e');
+ px(-13,8+arm,5,3,'#dce7ff');px(8,8-arm,5,3,'#dce7ff');
+ // boots/legs, stepping frames
+ const step=moving?(frame%2?3:-3):0;
+ px(-8,12,6,5,'#38435d');px(2,12,6,5,'#38435d');
+ px(-9+step,16,8,4,'#d8e7ff');px(2-step,16,8,4,'#d8e7ff');
+ px(-10+step,19,9,2,'#596b91');px(2-step,19,9,2,'#596b91');
+ // belt and shoulder plate
+ px(-8,4,16,2,'#f5cf6c');px(7,-1,4,5,'#fff0ad');px(-11,-1,4,5,'#c3d9ff');
+ // sword: pose shifts during attack
+ ctx.save();
+ if(swing){ctx.rotate(-.8+Math.sin(t*38)*.25);ctx.translate(2,-3)}
+ px(10,-3,4,18,'#6e4d3c');px(9,-9,6,5,'#f5d16b');
+ px(11,-18,3,14,'#eff8ff');px(10,-21,5,5,'#ffffff');px(10,-4,5,2,'#9bd7ff');
+ ctx.restore();
+ // tiny blue highlight
+ px(-4,-17,2,2,'#9fe8ff');px(5,-16,2,2,'#9fe8ff');
+ ctx.restore();
+}
+function drawEnemy(e){
+ ctx.save();ctx.translate(Math.round(e.x),Math.round(e.y+Math.sin(performance.now()/180+e.x)*1.2));
+ const t=performance.now()/1000, blink=e.hit>0;
+ px(-e.r,-e.r*.2,e.r*2,e.r*.9,'#17271f');
+ if(e.type==='slime'){
+  // glossy green slime with pixel outline and face
+  px(-10,-4,20,10,blink?'#fff':'#397a42');px(-13,0,26,8,blink?'#fff':'#4da95c');
+  px(-10,-7,20,8,blink?'#fff':'#67d879');px(-7,-10,14,4,blink?'#fff':'#9cf59a');
+  px(-7,-3,4,4,'#183b35');px(4,-3,4,4,'#183b35');px(-3,4,7,2,'#23603e');
+  px(-7,-8,4,2,'#d8ffb8');px(5,-7,3,2,'#d8ffb8');
+ }else{
+  // mushroom cap and cream stem
+  px(-7,-3,14,13,blink?'#fff':'#f3d4a4');px(-10,1,20,8,blink?'#fff':'#ffe8bd');
+  px(-15,-8,30,8,blink?'#fff':'#b63d37');px(-12,-13,24,6,blink?'#fff':'#e95543');
+  px(-7,-15,14,4,blink?'#fff':'#f76d50');px(-8,-7,5,4,'#fff0c9');px(4,-9,5,4,'#fff0c9');
+  px(-7,2,4,4,'#4a2d36');px(4,2,4,4,'#4a2d36');px(-2,7,5,2,'#9a4e43');
+ }
+ if(e.hp<e.maxHp){px(-14,-22,28,5,'#1b2435');px(-13,-21,26,3,'#51333d');px(-13,-21,26*Math.max(0,e.hp/e.maxHp),3,'#ff596a')}
+ ctx.restore();
+}
+function loop(ts){const dt=Math.min(.04,(ts-last)/1000||0);last=ts;update(dt);draw();requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+document.querySelectorAll('[data-job]').forEach(b=>b.addEventListener('click',()=>resetGame(b.dataset.job)));
+$('restartTop').onclick=()=>{if(player)resetGame(jobKey);else showOverlay(startModal)};
+$('playAgain').onclick=()=>resetGame(jobKey);$('pauseBtn').onclick=pause;$('resumeBtn').onclick=pause;
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();keys.add(k);if(k==='p'&&state!=='menu'&&state!=='over'&&state!=='level')pause();});
+window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);const r=canvas.getBoundingClientRect();joy={sx:(e.clientX-r.left)/r.width*W,sy:(e.clientY-r.top)/r.height*H,dx:0,dy:0};mouseDown=true});
+canvas.addEventListener('pointermove',e=>{if(!mouseDown||!joy)return;const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;let dx=x-joy.sx,dy=y-joy.sy,m=Math.hypot(dx,dy)||1;joy.dx=dx/m*Math.min(1,m/35);joy.dy=dy/m*Math.min(1,m/35)});
+function release(){mouseDown=false;joy=null}canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);
+})();
+</script>
+</body>
+</html>
