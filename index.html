@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>楓谷生存戰記 v0.2｜像素美術版</title>
+<title>楓谷生存戰記 v0.3｜像素美術＋手機搖桿版</title>
 <style>
 :root{--bg:#111525;--panel:#20283d;--line:#526080;--gold:#ffd56b;--text:#f5f7ff;--muted:#b9c3df}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% 0,#293452,#101421 65%);color:var(--text);font-family:system-ui,-apple-system,"Microsoft JhengHei",sans-serif}
@@ -35,18 +35,29 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;image-rendering:p
 .full{width:100%;margin-top:12px;background:#b98028;border-color:#ffdb85;color:#1a1b24}
 .hidden{display:none!important}
 .mobilehelp{display:none;color:var(--muted);font-size:12px;margin-top:8px}
+#mobileJoystick{display:none;position:absolute;left:18px;bottom:52px;width:126px;height:126px;z-index:4;touch-action:none;user-select:none;-webkit-user-select:none}
+#mobileJoystick .joy-base{position:absolute;inset:0;border:2px solid #d7e8ff99;border-radius:50%;background:radial-gradient(circle,#dcecff26,#0c172d70);box-shadow:0 4px 18px #0005,inset 0 0 20px #ffffff12}
+#mobileJoystick .joy-stick{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border:2px solid #e6f3ffcc;border-radius:50%;background:linear-gradient(145deg,#a9d5ffdd,#365e91e8);box-shadow:0 3px 12px #0008;transform:translate(0,0);pointer-events:none}
+#mobileJoystick .joy-label{position:absolute;left:0;right:0;bottom:-21px;text-align:center;font-size:10px;color:#e8f3ff;text-shadow:0 1px 3px #000}
+@media (pointer:coarse) and (max-width:900px){#mobileJoystick{display:block}.mobilehelp{display:block}}
+
 @media(max-width:760px){.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.side h2,.controls{grid-column:1/-1}.jobs,.choices{grid-template-columns:1fr}.job,.choice{min-height:auto}.mobilehelp{display:block}}
 </style>
 </head>
 <body>
 <main>
   <div class="top">
-    <div><h1>⚔️ 楓谷生存戰記</h1><div class="sub">2D 生存戰鬥 · 像素角色動畫版 · v0.2</div></div>
+    <div><h1>⚔️ 楓谷生存戰記</h1><div class="sub">2D 生存戰鬥 · 像素角色動畫版 · v0.3</div></div>
     <div><button id="restartTop">重新開始</button> <button id="pauseBtn">暫停</button></div>
   </div>
   <div class="layout">
     <section class="gamebox">
       <canvas id="game" width="960" height="600" aria-label="遊戲畫面"></canvas>
+      <div id="mobileJoystick" aria-label="移動搖桿">
+        <div class="joy-base"></div>
+        <div class="joy-stick" id="joyStick"></div>
+        <div class="joy-label">移動搖桿</div>
+      </div>
       <div class="hud">
         <div class="pill" id="jobPill">職業：尚未選擇</div>
         <div class="pill" id="timePill">⏱ 00:00</div>
@@ -87,10 +98,10 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;image-rendering:p
       <div class="stat"><span>生存時間</span><span id="timeStat">00:00</span></div>
       <div class="stat"><span>技能強化</span><span id="upgradeStat">0</span></div>
       <div class="controls"><strong>遊戲提示</strong><br>• 經驗水晶會自動吸收<br>• 升級時戰鬥會暫停<br>• 怪物會隨時間變強<br>• 受到攻擊會損失生命<br>• HP 歸零即結束本局</div>
-      <div class="notice">v0.2 加入程式繪製的像素風角色細節、待機呼吸、跑步擺動、劍士揮砍姿勢、怪物跳動與藍白斬擊特效。未包含官方遊戲素材。</div>
+      <div class="notice">v0.3 加入程式繪製的像素風角色細節、待機呼吸、跑步擺動、劍士揮砍姿勢、怪物跳動與藍白斬擊特效。未包含官方遊戲素材。</div>
     </aside>
   </div>
-  <div class="mobilehelp">手機操作：在遊戲畫面內按住並朝想移動的方向拖曳。攻擊會自動發動。</div>
+  <div class="mobilehelp">手機操作：使用左下角虛擬搖桿移動，攻擊會自動發動。電腦版則使用 WASD／方向鍵。</div>
   <div class="notice">提示：這是純前端原型，無需登入、伺服器或安裝。遊戲紀錄目前只保留在本次遊玩期間。</div>
 </main>
 <script>
@@ -284,9 +295,65 @@ $('restartTop').onclick=()=>{if(player)resetGame(jobKey);else showOverlay(startM
 $('playAgain').onclick=()=>resetGame(jobKey);$('pauseBtn').onclick=pause;$('resumeBtn').onclick=pause;
 window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();keys.add(k);if(k==='p'&&state!=='menu'&&state!=='over'&&state!=='level')pause();});
 window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
-canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);const r=canvas.getBoundingClientRect();joy={sx:(e.clientX-r.left)/r.width*W,sy:(e.clientY-r.top)/r.height*H,dx:0,dy:0};mouseDown=true});
-canvas.addEventListener('pointermove',e=>{if(!mouseDown||!joy)return;const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;let dx=x-joy.sx,dy=y-joy.sy,m=Math.hypot(dx,dy)||1;joy.dx=dx/m*Math.min(1,m/35);joy.dy=dy/m*Math.min(1,m/35)});
-function release(){mouseDown=false;joy=null}canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);
+// 自動偵測手機／觸控裝置：手機顯示固定虛擬搖桿，桌機保留鍵盤操作。
+const joystickEl=$('mobileJoystick'),joyStickEl=$('joyStick');
+const mobileQuery=window.matchMedia('(pointer: coarse) and (max-width: 900px)');
+let useMobileControls=mobileQuery.matches || (navigator.maxTouchPoints>0 && window.innerWidth<=900);
+function syncControlMode(){
+  useMobileControls=mobileQuery.matches || (navigator.maxTouchPoints>0 && window.innerWidth<=900);
+  if(joystickEl) joystickEl.style.display=useMobileControls?'block':'none';
+  const help=document.querySelector('.mobilehelp');
+  if(help) help.textContent=useMobileControls?'手機操作：使用左下角虛擬搖桿移動，攻擊會自動發動。':'電腦操作：使用 WASD／方向鍵移動，攻擊會自動發動。';
+}
+if(mobileQuery.addEventListener) mobileQuery.addEventListener('change',syncControlMode); else if(mobileQuery.addListener) mobileQuery.addListener(syncControlMode);
+window.addEventListener('resize',syncControlMode);
+syncControlMode();
+
+let joystickPointerId=null;
+function updateStickFromEvent(e){
+  if(!joy || (joystickPointerId!==null && e.pointerId!==joystickPointerId))return;
+  const r=joystickEl.getBoundingClientRect();
+  const cx=r.left+r.width/2, cy=r.top+r.height/2;
+  let dx=e.clientX-cx,dy=e.clientY-cy;
+  const max=Math.max(1,r.width*0.31),dist=Math.hypot(dx,dy)||1;
+  const scale=Math.min(1,max/dist);
+  dx*=scale;dy*=scale;
+  joy.dx=dx/max;joy.dy=dy/max;
+  joyStickEl.style.transform=`translate(${dx}px, ${dy}px)`;
+}
+if(joystickEl){
+  joystickEl.addEventListener('pointerdown',e=>{
+    if(!useMobileControls || state!=='playing')return;
+    e.preventDefault();joystickPointerId=e.pointerId;
+    try{joystickEl.setPointerCapture(e.pointerId)}catch(_){}
+    joy={dx:0,dy:0};mouseDown=true;updateStickFromEvent(e);
+  });
+  joystickEl.addEventListener('pointermove',e=>{if(mouseDown)updateStickFromEvent(e)});
+  function releaseJoystick(e){
+    if(joystickPointerId!==null && e && e.pointerId!==joystickPointerId)return;
+    mouseDown=false;joy=null;joystickPointerId=null;
+    if(joyStickEl)joyStickEl.style.transform='translate(0, 0)';
+  }
+  joystickEl.addEventListener('pointerup',releaseJoystick);
+  joystickEl.addEventListener('pointercancel',releaseJoystick);
+  joystickEl.addEventListener('lostpointercapture',()=>releaseJoystick());
+}
+// 也允許在非搖桿區觸控拖曳移動，方便平板或未顯示搖桿的觸控裝置。
+canvas.addEventListener('pointerdown',e=>{
+  if(useMobileControls || state!=='playing')return;
+  canvas.setPointerCapture(e.pointerId);
+  const r=canvas.getBoundingClientRect();
+  joy={sx:(e.clientX-r.left)/r.width*W,sy:(e.clientY-r.top)/r.height*H,dx:0,dy:0};
+  mouseDown=true;
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!mouseDown||!joy||useMobileControls||!Number.isFinite(joy.sx))return;
+  const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;
+  let dx=x-joy.sx,dy=y-joy.sy,m=Math.hypot(dx,dy)||1;
+  joy.dx=dx/m*Math.min(1,m/35);joy.dy=dy/m*Math.min(1,m/35);
+});
+function releaseCanvas(){if(!useMobileControls){mouseDown=false;joy=null}}
+canvas.addEventListener('pointerup',releaseCanvas);canvas.addEventListener('pointercancel',releaseCanvas);
 })();
 </script>
 </body>
